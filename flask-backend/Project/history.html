@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>history</title>
+</head>
+<body>
+    
+    <div class="main">
+
+    </div>
+
+
+
+
+    <script>
+        const main = document.querySelector(".main");
+
+        document.addEventListener("DOMContentLoaded" , (event) => {
+            fetch("http://127.0.0.1:5000/history", {
+                method : 'GET',
+                credentials : 'include',
+            }).then((response) => {
+                if(!response.ok){
+                    throw new Error("Selection Unsuccessful");
+                }
+                return response.json();
+            }).then((data) => {
+                show(data);
+                console.log(data);
+            }).catch((e) => {
+                console.error(`Error : ${e}`);
+            });
+        })
+
+        
+        function show(obj){
+            const arr = obj.history;
+
+            arr.forEach((ele) => {
+                const div = document.createElement("div");
+                const a = document.createElement("a");
+                const p = document.createElement("p");
+
+                a.textContent = `PDF name : ${ele.pdf_name}`;
+                p.textContent = `Date-Posted : ${ele.date_posted}`;
+
+                a.href = `http://127.0.0.1:5000/download/${ele.pdf_id}`
+
+                main.append(div);
+                div.append(a);
+                div.append(p);
+            })
+        }
+
+        
+
+    </script>
+</body>
+</html>

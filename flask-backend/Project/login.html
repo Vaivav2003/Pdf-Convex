@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convex</title>
+</head>
+<body>
+
+    <h1>Registration</h1>
+    
+    <form action="" method="post" id="registration">
+        <label for="username">USERNAME</label>
+        <input type="text" id="username" placeholder="Enter your name">
+
+        <label for="email">EMAIL</label>
+        <input type="text" id="email" placeholder="Enter your email">
+
+        <label for="password">PASSWORD</label>
+        <input type="text" id="password" placeholder="Enter your password">
+
+        <button type="submit">REGISTER</button>
+    </form>
+
+    <h1>Login</h1>
+    <form action="" method="post" id="login">
+        <label for="Lemail">EMAIL</label>
+        <input type="text" id="Lemail" placeholder="Enter your email">
+
+        <label for="Lpassword">PASSWORD</label>
+        <input type="text" id="Lpassword" placeholder="Enter your password">
+
+        <button type="submit">LOGIN</button>
+    </form>
+
+
+    <h1>Upload</h1>
+    <form action="" method="post" id="upload">
+        <label for="pdf">UPLOAD PDF FILE</label>
+        <input type="file" id="pdf" name="pdf_file" enctype="multipart/form-data" multiple>
+
+        <button type="submit">UPLOAD</button>
+    </form>
+
+    <h1>Get PDF</h1>
+    <button id="get_pdf">GET PDF</button>
+
+    <h1>ASK QUESTION</h1>
+    <form action="" id="ques">
+        <label for="question"></label>
+        <input type="text" id="question" placeholder="Enter your Question about the pdf" style="width:36rem; height:2.4rem; font-size: 1.2rem;">
+        <button type="submit">GET ANSWER</button>
+    </form>
+
+    <h1>SELECT</h1>
+    <form action="" id="select">
+        <label for="pdf">SELECT PDF FILE</label>
+        <input type="file" id="select_pdf" name="selected_pdf_files" enctype="multipart/form-data" multiple>
+
+        <button type="submit">SELECT</button>
+    </form>
+
+    <h1><a href="history.html">HISTORY</a></h1>
+
+    <script src="login.js"></script>
+</body>
+</html>

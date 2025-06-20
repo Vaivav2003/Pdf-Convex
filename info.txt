@@ -1,0 +1,218 @@
+Deployment Notes:-
+
+Make sure to have python3.10, docker, venv, node lts/iron, nginx
+apt install cmake build-essential python3-dev
+git clone
+backend:-------------------------------------------------------------------------------------------------------------------------------------------------------
+npm install
+create virtual environment
+install from requirements.txt
+run model-setup.sh
+create a new folder inside flask-backend pdf_files
+
+create a .env.local file with your secret key with and convex url
+SECRET_KEY='abcd'
+npx convex dev
+npx convex deploy
+change convex_url
+
+Now run qdrant vectorDB and llama.cpp for model web API
+Serve the llm using llama-server. Go inside llama.cpp then run the following command:
+./llama-server -c 512 -a "Phi-3.5-Instruct" -m models/Phi-3.5-mini-instruct-Q5_K_M.gguf --api-key abcd
+change the API key both here and in code
+create a service: nano /etc/systemd/system/llama_cpp_server.service
+[Unit]
+Description= llama.cpp web server
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/root/pdf-convex/flask-backend/MLmodel/project_convex/llama.cpp
+# Replace with the actual path
+ExecStart=/root/pdf-convex/flask-backend/MLmodel/project_convex/llama.cpp/llama-server -c 512 -a "Phi-3.5-Instruct" -m /root/pdf-convex/flask-backend/MLmodel/project_convex/llama.cpp/models/Phi-3.5-mini-instruct-Q5_K_M.gguf --api-key abcd
+
+[Install]
+WantedBy=multi-user.target
+
+Here the context length is 512 tokens and API-key is `abcd`.
+Run `Qdrant` Vector database for vector search. Run these commands inside the flask-backend folder:
+docker pull qdrant/qdrant
+
+docker run -p 6333:6333 -p 6334:6334 \
+    -v $(pwd)/qdrant_storage:/qdrant/storage:z \
+    qdrant/qdrant
+
+create a service: nano /etc/systemd/system/docker_qdrant.service
+[Unit]
+Description=Qdrant VectorDB
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/root/pdf-convex/flask-backend
+ExecStart=/usr/bin/docker run --restart unless-stopped -p 6333:6333 -p 6334:6334 \
+    -v /root/pdf-convex/flask-backend/qdrant_storage:/qdrant/storage:z \
+    qdrant/qdrant
+ExecStop=/usr/bin/docker stop $(/usr/bin/docker ps -q --filter ancestor=qdrant/qdrant)
+
+[Install]
+WantedBy=multi-user.target
+
+
+for reloading daemon
+systemctl daemon-reload
+
+
+remove debug=True from run.py and run with gunicorn
+create a service -> flask_app.service
+[Unit]
+Description=Flask App Gunicorn
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/root/pdf-convex/flask-backend
+# Replace with the actual path
+Environment="PATH=/root/pdf-convex/flask-backend/venv/bin"
+ExecStart=/root/pdf-convex/flask-backend/venv/bin/gunicorn --bind 127.0.0.1:5000 --timeout 180 run:app
+
+[Install]
+WantedBy=multi-user.target
+
+
+frontend:------------------------------------------------------------------------------------------------------------------------------------------------------
+
+npm install
+change the url in App.jsx and AuthPage.jsx to your https://domain
+npm run build
+cp -r dist /var/www/dist
+set up firewall----
+apt install ufw 
+ufw allow "Nginx Full"
+ufw allow ssh
+ufw enable
+
+configure domain on https://freedns.afraid.org/subdomain/
+nano /etc/nginx/sites-available/react
+                                          
+server {
+  listen 80;
+  server_name novafrost.strangled.net;
+  # This is for the frontend serving the built files inside /var/www/dist
+  location / {
+        root /var/www/dist;
+        index  index.html index.htm;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        try_files $uri $uri/ /index.html;
+  }
+
+  # This is for all the backend routes running on localhost:5000 having routes /question /registration etc.
+  location /question {
+        proxy_pass http://127.0.0.1:5000/question;
+        proxy_http_version 1.1;
+        proxy_read_timeout 180s;
+
+        # Headers to allow the connection to remain open for streaming
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'keep-alive';
+        proxy_set_header Host $host;
+
+        # Disable buffering to handle streaming properly
+        proxy_buffering off;
+        proxy_cache_bypass $http_upgrade;
+  }
+
+  location /registration {
+        proxy_pass http://127.0.0.1:5000/registration;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+  }
+
+  location /login {
+        proxy_pass http://127.0.0.1:5000/login;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+  }
+
+  location /upload {
+        proxy_pass http://127.0.0.1:5000/upload;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        client_max_body_size 20M;
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+  }
+
+  location /selected {
+        proxy_pass http://127.0.0.1:5000/selected;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+  }
+
+  location /history {
+        proxy_pass http://127.0.0.1:5000/history;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+  }
+
+  location /logout {
+        proxy_pass http://127.0.0.1:5000/logout;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+  }
+
+  location /account {
+        proxy_pass http://127.0.0.1:5000/account;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+  }
+
+  location /delete {
+        proxy_pass http://127.0.0.1:5000/delete;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+  }
+
+  location /download {
+        proxy_pass http://127.0.0.1:5000/download;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+  }
+}
+
+
+ln -s /etc/nginx/sites-available/react /etc/nginx/sites-enabled/react
+systemctl restart nginx
+
+for https
+apt install certbot python3-certbot-nginx
+certbot --nginx -d novafrost.strangled.net
